@@ -72,8 +72,8 @@
       border:1px solid var(--border);
       border-radius: 14px;
 
-      /* ✅ по-четим фон (и по-стабилно в Messenger/FB WebView) */
-      background: rgba(2,6,23,.55 (2,6,23,.55);
+      /* ✅ FIX: правилен CSS */
+      background: rgba(2,6,23,.55);
 
       min-width: 260px;
     }
@@ -114,7 +114,7 @@
       .searchbar{ min-width: unset; }
     }
 
-    /* ✅ Mobile topbar fix: търсенето да е на отделен ред и да се вижда текста */
+    /* ✅ Mobile topbar fix */
     @media (max-width: 680px){
       .topbar{
         flex-wrap: wrap;
@@ -139,7 +139,6 @@
 
       .searchbar .hint{ display:none; }
 
-      /* важно за iOS / Messenger WebView */
       .searchbar input{
         color: var(--text) !important;
         -webkit-text-fill-color: var(--text) !important;
@@ -678,7 +677,6 @@
       body: JSON.stringify({ action, payload })
     });
 
-    // ✅ ако функцията върне HTML (500), да не гърми JSON.parse, а да покажем смислена грешка
     const contentType = res.headers.get("content-type") || "";
     const text = await res.text();
     if (!contentType.includes("application/json")) {
@@ -808,7 +806,7 @@
         : `<span class="badge warn"><span class="b"></span>Изчерпан</span>`;
 
       const quickDisabled = left > 0 ? "disabled" : "";
-      const quick_attachTitle = left > 0 ? "Отключва се при Изчерпан" : "Добавя нов пакет за същия пациент (днес)";
+      const quickTitle = left > 0 ? "Отключва се при Изчерпан" : "Добавя нов пакет за същия пациент (днес)";
       const quickClass = left > 0 ? "secondary" : "primary";
 
       const tr = document.createElement("tr");
@@ -829,7 +827,7 @@
         <td class="right">
           <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap;">
             <button class="btn secondary small inline" data-action="details" data-id="${pkg.packageId}" style="width:auto;">Детайли</button>
-            <button class="btn ${quickClass} small inline" ${quickDisabled} title="${escapeHtml(quick_attachTitle)}"
+            <button class="btn ${quickClass} small inline" ${quickDisabled} title="${escapeHtml(quickTitle)}"
               data-action="quickNew" data-id="${pkg.packageId}" style="width:auto;">
               Нов пакет
             </button>
@@ -841,8 +839,7 @@
     }
   }
 
-  // ✅ Автоматичен избор на пациент в dropdown-ите при търсене:
-  // - избира САМО при точно 1 съвпадение
+  // ✅ Auto-select в dropdown-ите само при ТОЧНО 1 съвпадение
   function autoSelectPatientFromSearch() {
     const qRaw = (el("search").value || "").trim();
     const q = qRaw.toLowerCase();
@@ -853,9 +850,9 @@
       .map(p => ({ id: p.patientId, name: `${p.firstName} ${p.lastName}` }))
       .filter(x => x.name.toLowerCase().includes(q));
 
-    if (matches.length !== 1) return; // ✅ само при 1 съвпадение
-    const chosen = matches[0];
+    if (matches.length !== 1) return;
 
+    const chosen = matches[0];
     const sPkg = el("patientForPackage");
     const sCon = el("patientForConsult");
 
@@ -871,7 +868,7 @@
       renderSelects();
       renderMetrics();
       renderTable();
-      autoSelectPatientFromSearch(); // ✅ ако има 1 match – избира и зарежда
+      autoSelectPatientFromSearch(); // ✅ ако има 1 match – избира
       if (modalPkgId) openDetails(modalPkgId, true);
     } catch (e) {
       setConn(false, "Грешка");
@@ -990,9 +987,7 @@
     showModal(true);
   }
 
-  function closeModal() {
-    showModal(false);
-  }
+  function closeModal() { showModal(false); }
 
   async function deletePackage(packageId) {
     const ok = confirm("Сигурен ли си, че искаш да изтриеш този пакет? Това ще изтрие и консултациите към него.");
@@ -1049,12 +1044,11 @@
     el("fullName").value = "";
   });
 
-  // Enter adds patient
   el("fullName").addEventListener("keydown", (e) => {
     if (e.key === "Enter") el("addPatientBtn").click();
   });
 
-  // ✅ търсене: филтър + ако има 1 съвпадение -> селектва пациента
+  // ✅ search: филтър + auto-select само при 1 match
   el("search").addEventListener("input", () => {
     renderTable();
     autoSelectPatientFromSearch();
