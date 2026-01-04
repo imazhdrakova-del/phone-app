@@ -633,9 +633,6 @@ select option:hover{
     <p class="d" id="toastDesc"></p>
   </div>
 
-  <!-- SheetJS за .xlsx -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-
 <script>
 (() => {
   const SCRIPT_URL = "/.netlify/functions/api";
@@ -647,6 +644,28 @@ select option:hover{
   let modalPkgId = null;
 
   const el = (id) => document.getElementById(id);
+
+  // ✅ Lazy-load SheetJS (XLSX) само при експорт
+  function loadXLSX() {
+    if (window.XLSX) return Promise.resolve(window.XLSX);
+    if (loadXLSX._promise) return loadXLSX._promise;
+
+    loadXLSX._promise = new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+      s.async = true;
+
+      s.onload = () => {
+        if (window.XLSX) resolve(window.XLSX);
+        else reject(new Error("XLSX се зареди, но липсва window.XLSX"));
+      };
+
+      s.onerror = () => reject(new Error("Не успях да заредя XLSX библиотеката (CDN)."));
+      document.head.appendChild(s);
+    });
+
+    return loadXLSX._promise;
+  }
 
   function setBusy(v) {
     busy = v;
@@ -891,11 +910,62 @@ select option:hover{
     setBusy(false);
   }
 
-  function exportToExcel() {
-    if (!window.XLSX) {
-      toast("err", "Липсва XLSX библиотека", "Провери интернет връзката/скрипта.");
-      return;
+  async function exportToExcel() {
+    try {
+      toast("ok", "Подготвям експорт…", "Зареждам библиотеката (само този път).");
+
+      await loadXLSX(); // ✅ зарежда XLSX само при първия експорт
+
+      const patientMap = new Map(state.patients.map(p => [p.patientId, p]));
+
+      const consultsByPkg = new Map();
+      for (const c of state.consultations) {
+        const arr = consultsByPkg.get(c.packageId) || [];
+        arr.push(c);
+        consultsByPkg.set(c.packageId, arr);
+      }
+      for (const [pkgId, arr] of consultsByPkg.entries()) {
+        arr.sort((a,b) => String(a.date).localeCompare(String(b.date)));
+        consultsByPkg.set(pkgId, arr);
+      }
+
+      const rows = state.packages
+        .slice()
+        .sort((a,b) => String(a.purchaseDate).localeCompare(String(b.purchaseDate)))
+        .map(pkg => {
+          const pat = patientMap.get(pkg.patientId);
+          const patientName = pat ? `${pat.firstName} ${pat.lastName}` : "(липсващ пациент)";
+
+          const consults = consultsByPkg.get(pkg.packageId) || [];
+          const done = consults.length;
+          const left = Math.max(0, Number(pkg.size) - done);
+          const status = left > 0 ? "Активен" : "Изчерпан";
+
+          const consultDatesList = consults.map(c => formatDate(c.date)).join(", ");
+
+          return {
+            "Пациент": patientName,
+            "Дата покупка (пакет)": formatDate(pkg.purchaseDate),
+            "Дати консултации": consultDatesList,
+            "Проведени (в пакета)": done,
+            "Оставащи (в пакета)": left,
+            "Статус": status
+          };
+        });
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Packages");
+
+      const filename = `phone-consultations-${todayISO()}.xlsx`;
+      XLSX.writeFile(wb, filename);
+
+      toast("ok", "Експорт готов", filename);
+    } catch (e) {
+      toast("err", "Експортът не успя", e.message || String(e));
     }
+  }
+
 
     const patientMap = new Map(state.patients.map(p => [p.patientId, p]));
 
