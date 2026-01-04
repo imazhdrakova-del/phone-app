@@ -5,44 +5,65 @@ export default async (req) => {
     }
 
     const SCRIPT_URL = process.env.APPS_SCRIPT_URL; // /exec
-    const API_KEY = process.env.API_KEY;            // ✅ secret in Netlify
+    const API_KEY = process.env.API_KEY;            // secret in Netlify
 
     if (!SCRIPT_URL) {
-      return new Response(JSON.stringify({ ok: false, error: "Missing APPS_SCRIPT_URL" }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
+      return json({ ok: false, error: "Missing APPS_SCRIPT_URL" }, 500);
     }
     if (!API_KEY) {
-      return new Response(JSON.stringify({ ok: false, error: "Missing API_KEY" }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
+      return json({ ok: false, error: "Missing API_KEY" }, 500);
+    }
+
+    // Пази се от не-JSON заявки
+    const ct = req.headers.get("content-type") || "";
+    if (!ct.includes("application/json")) {
+      return json({ ok: false, error: "Expected application/json" }, 400);
     }
 
     const incoming = await req.json();
 
-    const body = {
-      ...incoming,
-      apiKey: API_KEY
-    };
+    // Минимална валидация на shape-а
+    if (!incoming || typeof incoming !== "object") {
+      return json({ ok: false, error: "Invalid JSON body" }, 400);
+    }
 
-    const upstream = await fetch(SCRIPT_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(body),
-    });
+    const body = { ...incoming, apiKey: API_KEY };
+
+    // Optional: timeout (напр. 25s)
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), 25_000);
+
+    let upstream;
+    try {
+      upstream = await fetch(SCRIPT_URL, {
+        method: "POST",
+        // Apps Script често очаква text/plain; оставяме го така
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(body),
+        signal: ac.signal,
+      });
+    } finally {
+      clearTimeout(t);
+    }
 
     const text = await upstream.text();
 
+    // Ако Apps Script върне не-JSON, не го “маскираме” като JSON.
+    // Клиентът ти вече проверява content-type.
+    const upstreamCT = upstream.headers.get("content-type") || "";
+    const isJson = upstreamCT.includes("application/json");
+
     return new Response(text, {
       status: upstream.status,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": isJson ? "application/json" : "text/plain; charset=utf-8",
+        "Cache-Control": "no-store",
+      },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ ok: false, error: err?.message || String(err) }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-};
+    const msg =
+      err?.name === "AbortError"
+        ? "Upstream timeout"
+        : (err?.message || String(err));
+
+    return js
