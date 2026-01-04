@@ -215,7 +215,6 @@
         grid-template-columns: 1fr 1fr;
         gap: 12px;
       }
-
       @media (max-width: 780px){
         .ops-grid{ grid-template-columns: 1fr; }
       }
@@ -286,7 +285,6 @@
       /* ✅ Четими dropdown опции – тъмен фон + светъл текст */
       select option{ background:#0b1220; color:var(--text); }
       select option:checked{ background: rgba(96,165,250,.22); color: var(--text); }
-      select option:hover{ background: rgba(96,165,250,.14); color: var(--text); }
 
       .btn-row{ display:flex; gap:10px; }
 
@@ -330,7 +328,6 @@
       .btn.inline{ width:auto; }
       .btn[disabled]{ opacity:.5; cursor:not-allowed; }
 
-      /* ✅ Mobile: по-лесно натискане */
       @media (max-width: 780px){
         .btn{ padding: 12px 12px; }
       }
@@ -589,7 +586,13 @@
       <div class="grid">
         <!-- Нов пациент -->
         <div class="card">
-          
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Нов пациент</h2>
+              <div class="card-desc">Добави пациент с име и фамилия.</div>
+            </div>
+          </div>
+
           <div class="card-body">
             <div class="form-grid">
               <div style="grid-column:1 / -1;">
@@ -605,15 +608,8 @@
           </div>
         </div>
 
-        <!-- Операции -->
+        <!-- Операции (без header, както искаш) -->
         <div class="card">
-          <div class="card-header">
-            <div>
-              <h2 class="card-title">Операции</h2>
-              <div class="card-desc">Избери пациент и добави пакет или консултация.</div>
-            </div>
-          </div>
-
           <div class="card-body">
             <div class="form-grid" style="grid-template-columns: 1fr;">
               <div>
@@ -785,12 +781,8 @@
         let state = { patients: [], packages: [] };
         let consultCountByPkg = new Map();
         let consultsByPkg = new Map();
-        let busy = false;
-
-        // ✅ Cache / индекси за бързи изчисления
         let patientMap = new Map();
 
-        // Modal state
         let modalPkgId = null;
 
         const el = (id) => document.getElementById(id);
@@ -804,10 +796,7 @@
             const s = document.createElement("script");
             s.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
             s.async = true;
-            s.onload = () => {
-              if (window.XLSX) resolve(window.XLSX);
-              else reject(new Error("XLSX се зареди, но липсва window.XLSX"));
-            };
+            s.onload = () => (window.XLSX ? resolve(window.XLSX) : reject(new Error("XLSX се зареди, но липсва window.XLSX")));
             s.onerror = () => reject(new Error("Не успях да заредя XLSX библиотеката (CDN)."));
             document.head.appendChild(s);
           });
@@ -816,7 +805,6 @@
         }
 
         function setBusy(v) {
-          busy = v;
           document.body.classList.toggle("busy", v);
         }
 
@@ -847,7 +835,7 @@
 
         function todayISO() {
           const now = new Date();
-          const offsetMs = now.getTimezoneOffset() * 60_000; // minutes -> ms
+          const offsetMs = now.getTimezoneOffset() * 60_000;
           const local = new Date(now.getTime() - offsetMs);
           return local.toISOString().slice(0, 10);
         }
@@ -984,8 +972,7 @@
 
           if (rows.length === 0) {
             const tr = document.createElement("tr");
-            tr.innerHTML =
-              `<td colspan="5" style="color:var(--muted); padding: 18px 14px;">Няма резултати.</td>`;
+            tr.innerHTML = `<td colspan="5" style="color:var(--muted); padding: 18px 14px;">Няма резултати.</td>`;
             tbody.appendChild(tr);
             return;
           }
@@ -1033,14 +1020,12 @@
           tbody.appendChild(frag);
         }
 
-        // ✅ Auto-select само при ТОЧНО 1 съвпадение (и само за patientSelected)
+        // ✅ Auto-select само при ТОЧНО 1 съвпадение
         function autoSelectPatientFromSearch() {
-          const qRaw = (el("search").value || "").trim();
-          const q = qRaw.toLowerCase();
+          const q = (el("search").value || "").trim().toLowerCase();
           if (!q) return;
 
           const activePatients = state.patients.filter((p) => !safeBool(p.archived));
-
           const matches = activePatients
             .map((p) => ({ id: p.patientId, name: `${p.firstName} ${p.lastName}` }))
             .filter((x) => x.name.toLowerCase().includes(q));
@@ -1063,10 +1048,9 @@
             consultCountByPkg = new Map(
               Object.entries(data.consultCountByPkg || {}).map(([k, v]) => [k, Number(v) || 0])
             );
-            consultsByPkg = new Map(); // празно в началото (ще го пълним при "Детайли")
+            consultsByPkg = new Map();
 
             rebuildIndexes();
-
             setConn(true);
 
             renderSelects();
@@ -1087,7 +1071,6 @@
             toast("ok", "Подготвям експорт…", window.XLSX ? "" : "Зареждам библиотеката (само този път).");
             await loadXLSX();
 
-            // 1) Вземаме пълния state (вкл. consultations) САМО за експорт
             toast("ok", "Експорт…", "Зареждам всички консултации (по-бавно).");
             const full = await api("getState");
 
@@ -1095,11 +1078,9 @@
             const packagesFull = full.packages || [];
             const consultationsFull = full.consultations || [];
 
-            // 2) Индекси
             const patientMapLocal = new Map(patientsFull.map((p) => [p.patientId, p]));
             const consultsByPkgLocal = buildConsultsByPkgMap(consultationsFull);
 
-            // 3) Редове за Excel
             const rows = packagesFull
               .slice()
               .sort((a, b) => String(a.purchaseDate).localeCompare(String(b.purchaseDate)))
@@ -1153,7 +1134,6 @@
 
           modalPkgId = pkgId;
 
-          // ако още не сме зареждали консултациите – зареждаме ги (по-бавно, но само при първо "Детайли")
           if (consultsByPkg.size === 0) {
             try {
               setBusy(true);
@@ -1213,13 +1193,10 @@
         }
 
         async function deletePackage(packageId) {
-          const ok = confirm(
-            "Сигурен ли си, че искаш да изтриеш този пакет? Това ще изтрие и консултациите към него."
-          );
+          const ok = confirm("Сигурен ли си, че искаш да изтриеш този пакет? Това ще изтрие и консултациите към него.");
           if (!ok) return;
 
           setBusy(true);
-
           try {
             await api("deletePackage", { packageId });
             toast("ok", "Пакет изтрит", "Данните са обновени.");
@@ -1228,11 +1205,9 @@
           } catch (e) {
             toast("err", "Грешка", e.message);
           }
-
           setBusy(false);
         }
 
-        // ✅ FIX: локален update вместо refresh при "Нов пакет" (quickNew)
         async function quickNewPackageFromOld(oldPkgId) {
           const oldPkg = state.packages.find((p) => p.packageId === oldPkgId);
           if (!oldPkg) return toast("err", "Липсва пакет", "Не е намерен.");
@@ -1241,25 +1216,16 @@
           if (left > 0) return toast("warn", "Пакетът не е изчерпан", "„Нов пакет“ се отключва при Изчерпан.");
 
           const patientName = getPatientName(oldPkg.patientId);
-
-          const ok = confirm(
-            `Да добавя ли нов пакет за ${patientName} (днес, размер: ${Number(oldPkg.size)})?`
-          );
+          const ok = confirm(`Да добавя ли нов пакет за ${patientName} (днес, размер: ${Number(oldPkg.size)})?`);
           if (!ok) return;
 
           setBusy(true);
-
           try {
             const purchaseDate = todayISO();
             const size = Number(oldPkg.size);
 
-            const r = await api("addPackage", {
-              patientId: oldPkg.patientId,
-              purchaseDate,
-              size,
-            });
+            const r = await api("addPackage", { patientId: oldPkg.patientId, purchaseDate, size });
 
-            // ✅ локален update
             state.packages.unshift({
               packageId: r.packageId,
               patientId: oldPkg.patientId,
@@ -1272,16 +1238,14 @@
             consultCountByPkg.set(r.packageId, 0);
 
             toast("ok", "Нов пакет добавен", `${patientName} • ${formatDate(purchaseDate)}`);
-
             renderTable();
           } catch (e) {
             toast("err", "Грешка", e.message);
           }
-
           setBusy(false);
         }
 
-        // Wire up defaults
+        // Defaults
         el("packageDate").value = todayISO();
         el("consultDate").value = todayISO();
 
@@ -1298,7 +1262,7 @@
           if (e.key === "Enter") el("addPatientBtn").click();
         });
 
-        // ✅ search: филтър + auto-select само при 1 match
+        // search -> filter + auto-select only when exactly 1 match
         el("search").addEventListener("input", () => {
           renderTable();
           autoSelectPatientFromSearch();
@@ -1315,7 +1279,6 @@
         el("exportBtnTop").addEventListener("click", exportToExcel);
         el("modalExportBtn").addEventListener("click", exportToExcel);
 
-        // ✅ addPatient: 1 API call + локален update
         el("addPatientBtn").addEventListener("click", async () => {
           const full = (el("fullName").value || "").trim().replace(/\s+/g, " ");
           if (!full) return toast("warn", "Липсва име", "Въведи име и фамилия.");
@@ -1351,7 +1314,6 @@
           setBusy(false);
         });
 
-        // ✅ addPackage: 1 API call + локален update
         el("addPackageBtn").addEventListener("click", async () => {
           const patientId = el("patientSelected").value;
           const purchaseDate = el("packageDate").value;
@@ -1377,7 +1339,6 @@
             });
 
             consultCountByPkg.set(r.packageId, 0);
-
             renderTable();
           } catch (e) {
             toast("err", "Грешка", e.message);
@@ -1385,7 +1346,6 @@
           setBusy(false);
         });
 
-        // ✅ addConsultation: локален update на броя към пакета
         el("addConsultBtn").addEventListener("click", async () => {
           const patientId = el("patientSelected").value;
           const date = el("consultDate").value;
@@ -1394,7 +1354,6 @@
           if (!date) return toast("warn", "Липсва дата", "Избери дата.");
 
           setBusy(true);
-
           try {
             const r = await api("addConsultation", { patientId, date });
 
@@ -1413,7 +1372,6 @@
           } catch (e) {
             toast("err", "Грешка", e.message);
           }
-
           setBusy(false);
         });
 
@@ -1429,7 +1387,6 @@
           if (action === "quickNew") return quickNewPackageFromOld(id);
         });
 
-        // Modal close
         el("modalCloseBtn").addEventListener("click", closeModal);
         el("modalCloseBtn2").addEventListener("click", closeModal);
 
@@ -1441,7 +1398,6 @@
           if (e.key === "Escape" && modalPkgId) closeModal();
         });
 
-        // Modal actions
         el("dDeleteBtn").addEventListener("click", () => {
           if (!modalPkgId) return;
           deletePackage(modalPkgId);
@@ -1452,7 +1408,6 @@
           quickNewPackageFromOld(modalPkgId);
         });
 
-        // Start
         refresh();
       })();
     </script>
