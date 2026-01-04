@@ -797,13 +797,13 @@
       (() => {
         const SCRIPT_URL = "/.netlify/functions/api";
 
-        let state = { patients: [], packages: [], consultations: [] };
+        let state = { patients: [], packages: [] };
+        let consultCountByPkg = new Map(); 
+        let consultsByPkg = new Map();       
         let busy = false;
 
         // ✅ Cache / индекси за бързи изчисления
         let patientMap = new Map();
-        let consultCountByPkg = new Map();
-        let consultsByPkg = new Map();
 
         // Modal state
         let modalPkgId = null;
@@ -899,29 +899,25 @@
             .replaceAll("'", "&#039;");
         }
 
-        function rebuildIndexes() {
-          // пациенти
-          patientMap = new Map(state.patients.map((p) => [p.patientId, p]));
+function buildConsultsByPkgMap(consultations) {
+  const map = new Map();
+  for (const c of (consultations || [])) {
+    const id = c.packageId;
+    const arr = map.get(id) || [];
+    arr.push(c);
+    map.set(id, arr);
+  }
+  // подреждаме по дата (по желание, но е хубаво)
+  for (const [id, arr] of map.entries()) {
+    arr.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  }
+  return map;
+}
 
-          // консултации по пакет
-          consultCountByPkg = new Map();
-          consultsByPkg = new Map();
-
-          for (const c of state.consultations) {
-            const id = c.packageId;
-
-            consultCountByPkg.set(id, (consultCountByPkg.get(id) || 0) + 1);
-
-            const arr = consultsByPkg.get(id) || [];
-            arr.push(c);
-            consultsByPkg.set(id, arr);
-          }
-
-          // подреждаме датите за детайлите (опционално, но полезно)
-          for (const [id, arr] of consultsByPkg.entries()) {
-            arr.sort((a, b) => String(a.date).localeCompare(String(b.date)));
-          }
-        }
+       function rebuildIndexes() {
+  // пациенти
+  patientMap = new Map(state.patients.map((p) => [p.patientId, p]));
+}
 
         function computePackageStats(pkgId, size) {
           const used = consultCountByPkg.get(pkgId) || 0;
@@ -938,7 +934,8 @@
           const patientsTotal = state.patients.length;
           const patientsActive = state.patients.filter((p) => !safeBool(p.archived)).length;
           const packagesTotal = state.packages.length;
-          const consultsTotal = state.consultations.length;
+          let consultsTotal = 0;
+for (const v of consultCountByPkg.values()) consultsTotal += Number(v || 0);
           const exhausted = state.packages.filter(
             (pkg) => computePackageStats(pkg.packageId, pkg.size).left === 0
           ).length;
@@ -1097,70 +1094,88 @@
           if (sCon && Array.from(sCon.options).some((o) => o.value === chosen.id)) sCon.value = chosen.id;
         }
 
-        async function refresh() {
-          setBusy(true);
+async function refresh() {
+  setBusy(true);
 
-          try {
-            state = await api("getState");
-            rebuildIndexes(); // ✅ важно
-            setConn(true);
+  try {
+    const data = await api("getStateLite");
+    state.patients = data.patients || [];
+    state.packages = data.packages || [];
 
-            renderSelects();
-            renderMetrics();
-            renderTable();
-            autoSelectPatientFromSearch(); // ✅ ако има 1 match – избира
+    consultCountByPkg = new Map(Object.entries(data.consultCountByPkg || {}));
+    consultsByPkg = new Map(); // празно в началото (ще го пълним при "Детайли")
 
-            if (modalPkgId) openDetails(modalPkgId, true);
-          } catch (e) {
-            setConn(false, "Грешка");
-            toast("err", "Грешка при зареждане", e.message);
-          }
+    rebuildIndexes();
 
-          setBusy(false);
-        }
+    setConn(true);
+
+    renderSelects();
+    renderMetrics();
+    renderTable();
+    autoSelectPatientFromSearch();
+
+    if (modalPkgId) openDetails(modalPkgId, true);
+  } catch (e) {
+    setConn(false, "Грешка");
+    toast("err", "Грешка при зареждане", e.message);
+  }
+
+  setBusy(false);
+}
 
         async function exportToExcel() {
-          try {
-            toast("ok", "Подготвям експорт…", window.XLSX ? "" : "Зареждам библиотеката (само този път).");
+  try {
+    toast("ok", "Подготвям експорт…", window.XLSX ? "" : "Зареждам библиотеката (само този път).");
+    await loadXLSX();
 
-            await loadXLSX(); // ✅ зарежда XLSX само при първия експорт
+    // 1) Вземаме пълния state (вкл. consultations) САМО за експорт
+    toast("ok", "Експорт…", "Зареждам всички консултации (по-бавно).");
+    const full = await api("getState"); // трябва API-то да връща {patients, packages, consultations}
 
-            const consultsByPkgLocal = consultsByPkg; // вече е готов кеш
+    const patientsFull = full.patients || [];
+    const packagesFull = full.packages || [];
+    const consultationsFull = full.consultations || [];
 
-            const rows = state.packages
-              .slice()
-              .sort((a, b) => String(a.purchaseDate).localeCompare(String(b.purchaseDate)))
-              .map((pkg) => {
-                const pat = patientMap.get(pkg.patientId);
-                const patientName = pat ? `${pat.firstName} ${pat.lastName}` : "(липсващ пациент)";
-                const consults = consultsByPkgLocal.get(pkg.packageId) || [];
-                const done = consults.length;
-                const left = Math.max(0, Number(pkg.size) - done);
-                const status = left > 0 ? "Активен" : "Изчерпан";
-                const consultDatesList = consults.map((c) => formatDate(c.date)).join(", ");
+    // 2) Индекси
+    const patientMapLocal = new Map(patientsFull.map((p) => [p.patientId, p]));
+    const consultsByPkgLocal = buildConsultsByPkgMap(consultationsFull);
 
-                return {
-                  "Пациент": patientName,
-                  "Дата покупка (пакет)": formatDate(pkg.purchaseDate),
-                  "Дати консултации": consultDatesList,
-                  "Проведени (в пакета)": done,
-                  "Оставащи (в пакета)": left,
-                  "Статус": status,
-                };
-              });
+    // 3) Редове за Excel
+    const rows = packagesFull
+      .slice()
+      .sort((a, b) => String(a.purchaseDate).localeCompare(String(b.purchaseDate)))
+      .map((pkg) => {
+        const pat = patientMapLocal.get(pkg.patientId);
+        const patientName = pat ? `${pat.firstName} ${pat.lastName}` : "(липсващ пациент)";
 
-            const ws = XLSX.utils.json_to_sheet(rows);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Packages");
+        const consults = consultsByPkgLocal.get(pkg.packageId) || [];
+        const done = consults.length;
+        const left = Math.max(0, Number(pkg.size) - done);
+        const status = left > 0 ? "Активен" : "Изчерпан";
+        const consultDatesList = consults.map((c) => formatDate(c.date)).join(", ");
 
-            const filename = `phone-consultations-${todayISO()}.xlsx`;
-            XLSX.writeFile(wb, filename);
+        return {
+          "Пациент": patientName,
+          "Дата покупка (пакет)": formatDate(pkg.purchaseDate),
+          "Дати консултации": consultDatesList,
+          "Проведени (в пакета)": done,
+          "Оставащи (в пакета)": left,
+          "Статус": status,
+        };
+      });
 
-            toast("ok", "Експорт готов", filename);
-          } catch (e) {
-            toast("err", "Експортът не успя", e.message || String(e));
-          }
-        }
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Packages");
+
+    const filename = `phone-consultations-${todayISO()}.xlsx`;
+    XLSX.writeFile(wb, filename);
+
+    toast("ok", "Експорт готов", filename);
+  } catch (e) {
+    toast("err", "Експортът не успя", e.message || String(e));
+  }
+}
 
         // Modal
         function showModal(show) {
@@ -1170,7 +1185,7 @@
           if (!show) modalPkgId = null;
         }
 
-        function openDetails(pkgId, silent = false) {
+        async function openDetails(pkgId, silent = false) {
           const pkg = state.packages.find((p) => p.packageId === pkgId);
           if (!pkg) {
             if (!silent) toast("err", "Липсва пакет", "Не е намерен.");
@@ -1178,6 +1193,19 @@
           }
 
           modalPkgId = pkgId;
+
+// ако още не сме зареждали консултациите – зареждаме ги (по-бавно, но само при първо "Детайли")
+if (consultsByPkg.size === 0) {
+  try {
+    setBusy(true);
+    const full = await api("getState");
+    consultsByPkg = buildConsultsByPkgMap(full.consultations || []);
+  } catch (e) {
+    toast("err", "Грешка при детайли", e.message);
+  } finally {
+    setBusy(false);
+  }
+}
 
           const patientName = getPatientName(pkg.patientId);
           const { used, left } = computePackageStats(pkg.packageId, pkg.size);
