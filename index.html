@@ -64,7 +64,6 @@
       box-shadow: 0 10px 25px rgba(0,0,0,.35);
     }
     .brand h1{ margin:0; font-size: 16px; letter-spacing: .2px; }
-    .brand .sub{ margin-top:2px; font-size: 12px; color: var(--muted); }
 
     .searchbar{
       flex: 1;
@@ -72,7 +71,10 @@
       padding: 10px 12px;
       border:1px solid var(--border);
       border-radius: 14px;
-      background: rgba(11,19,36,.55);
+
+      /* ✅ по-четим фон (и по-стабилно в Messenger/FB WebView) */
+      background: rgba(2,6,23,.55);
+
       min-width: 260px;
     }
     .searchbar input{
@@ -81,6 +83,7 @@
       background: transparent;
       color: var(--text);
       font-size: 14px;
+      caret-color: var(--text);
     }
     .searchbar .hint{ font-size: 12px; color: var(--muted); white-space: nowrap; }
 
@@ -109,6 +112,38 @@
       .grid{ grid-template-columns: 1fr; }
       .brand{ min-width: unset; }
       .searchbar{ min-width: unset; }
+    }
+
+    /* ✅ Mobile topbar fix: търсенето да е на отделен ред и да се вижда текста */
+    @media (max-width: 680px){
+      .topbar{
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .brand{
+        min-width: 0;
+        flex: 1 1 auto;
+      }
+
+      .top-actions{
+        margin-left: auto;
+        flex: 0 0 auto;
+      }
+
+      .searchbar{
+        order: 3;
+        flex: 1 1 100%;
+        min-width: 0;
+      }
+
+      .searchbar .hint{ display:none; }
+
+      /* важно за iOS / Messenger WebView */
+      .searchbar input{
+        color: var(--text) !important;
+        -webkit-text-fill-color: var(--text) !important;
+      }
     }
 
     /* Cards */
@@ -224,7 +259,6 @@
       border-bottom: 1px solid rgba(148,163,184,.10);
     }
     .table-head .left h2{ margin:0; font-size: 14px; }
-    .table-head .left .desc{ margin-top:4px; font-size: 12px; color: var(--muted); }
     .table-actions{ display:flex; gap:10px; align-items:end; flex-wrap:wrap; }
     .table-wrap{ overflow:auto; }
     table{ width:100%; border-collapse: separate; border-spacing: 0; }
@@ -643,7 +677,15 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action, payload })
     });
-    const json = await res.json();
+
+    // ✅ ако функцията върне HTML (500), да не гърми JSON.parse, а да покажем смислена грешка
+    const contentType = res.headers.get("content-type") || "";
+    const text = await res.text();
+    if (!contentType.includes("application/json")) {
+      throw new Error("Server error (non-JSON response). Провери Netlify Functions логовете.");
+    }
+
+    const json = JSON.parse(text);
     if (!json.ok) throw new Error(json.error || "API error");
     return json.data;
   }
@@ -766,7 +808,7 @@
         : `<span class="badge warn"><span class="b"></span>Изчерпан</span>`;
 
       const quickDisabled = left > 0 ? "disabled" : "";
-      const quickTitle = left > 0 ? "Отключва се при Изчерпан" : "Добавя нов пакет за същия пациент (днес)";
+      const quick_attachTitle = left > 0 ? "Отключва се при Изчерпан" : "Добавя нов пакет за същия пациент (днес)";
       const quickClass = left > 0 ? "secondary" : "primary";
 
       const tr = document.createElement("tr");
@@ -787,7 +829,7 @@
         <td class="right">
           <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap;">
             <button class="btn secondary small inline" data-action="details" data-id="${pkg.packageId}" style="width:auto;">Детайли</button>
-            <button class="btn ${quickClass} small inline" ${quickDisabled} title="${escapeHtml(quickTitle)}"
+            <button class="btn ${quickClass} small inline" ${quickDisabled} title="${escapeHtml(quick_attachTitle)}"
               data-action="quickNew" data-id="${pkg.packageId}" style="width:auto;">
               Нов пакет
             </button>
@@ -1098,6 +1140,3 @@
 </script>
 </body>
 </html>
-
-
-
