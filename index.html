@@ -73,7 +73,7 @@
       border-radius: 14px;
 
       /* ✅ по-четим фон (и по-стабилно в Messenger/FB WebView) */
-      background: rgba(2,6,23,.55);
+      background: rgba(2,6,23,.55 (2,6,23,.55);
 
       min-width: 260px;
     }
@@ -841,6 +841,28 @@
     }
   }
 
+  // ✅ Автоматичен избор на пациент в dropdown-ите при търсене:
+  // - избира САМО при точно 1 съвпадение
+  function autoSelectPatientFromSearch() {
+    const qRaw = (el("search").value || "").trim();
+    const q = qRaw.toLowerCase();
+    if (!q) return;
+
+    const activePatients = state.patients.filter(p => !safeBool(p.archived));
+    const matches = activePatients
+      .map(p => ({ id: p.patientId, name: `${p.firstName} ${p.lastName}` }))
+      .filter(x => x.name.toLowerCase().includes(q));
+
+    if (matches.length !== 1) return; // ✅ само при 1 съвпадение
+    const chosen = matches[0];
+
+    const sPkg = el("patientForPackage");
+    const sCon = el("patientForConsult");
+
+    if (sPkg && Array.from(sPkg.options).some(o => o.value === chosen.id)) sPkg.value = chosen.id;
+    if (sCon && Array.from(sCon.options).some(o => o.value === chosen.id)) sCon.value = chosen.id;
+  }
+
   async function refresh() {
     setBusy(true);
     try {
@@ -849,6 +871,7 @@
       renderSelects();
       renderMetrics();
       renderTable();
+      autoSelectPatientFromSearch(); // ✅ ако има 1 match – избира и зарежда
       if (modalPkgId) openDetails(modalPkgId, true);
     } catch (e) {
       setConn(false, "Грешка");
@@ -1031,7 +1054,15 @@
     if (e.key === "Enter") el("addPatientBtn").click();
   });
 
-  el("search").addEventListener("input", renderTable);
+  // ✅ търсене: филтър + ако има 1 съвпадение -> селектва пациента
+  el("search").addEventListener("input", () => {
+    renderTable();
+    autoSelectPatientFromSearch();
+  });
+  el("search").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") autoSelectPatientFromSearch();
+  });
+
   el("filterStatus").addEventListener("change", renderTable);
   el("sortBy").addEventListener("change", renderTable);
 
