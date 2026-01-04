@@ -640,6 +640,11 @@ select option:hover{
   let state = { patients: [], packages: [], consultations: [] };
   let busy = false;
 
+// ✅ Cache / индекси за бързи изчисления
+let patientMap = new Map();
+let consultCountByPkg = new Map();
+let consultsByPkg = new Map();
+
   // Modal state
   let modalPkgId = null;
 
@@ -695,9 +700,12 @@ select option:hover{
     return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()}`;
   }
 
-  function todayISO() {
-    return new Date().toISOString().slice(0, 10);
-  }
+function todayISO() {
+  const now = new Date();
+  const offsetMs = now.getTimezoneOffset() * 60_000; // minutes -> ms
+  const local = new Date(now.getTime() - offsetMs);
+  return local.toISOString().slice(0, 10);
+}
 
   function safeBool(v) {
     return String(v).toLowerCase() === "true";
@@ -727,14 +735,38 @@ select option:hover{
       .replaceAll('"',"&quot;").replaceAll("'","&#039;");
   }
 
-  function computePackageStats(pkgId, size) {
-    const used = state.consultations.filter(c => c.packageId === pkgId).length;
-    const left = Math.max(0, Number(size) - used);
-    return { used, left, status: left > 0 ? "Активен" : "Изчерпан" };
+  function rebuildIndexes() {
+  // пациенти
+  patientMap = new Map(state.patients.map(p => [p.patientId, p]));
+
+  // консултации по пакет
+  consultCountByPkg = new Map();
+  consultsByPkg = new Map();
+
+  for (const c of state.consultations) {
+    const id = c.packageId;
+
+    consultCountByPkg.set(id, (consultCountByPkg.get(id) || 0) + 1);
+
+    const arr = consultsByPkg.get(id) || [];
+    arr.push(c);
+    consultsByPkg.set(id, arr);
   }
 
+  // подреждаме датите за детайлите (опционално, но полезно)
+  for (const [id, arr] of consultsByPkg.entries()) {
+    arr.sort((a,b) => String(a.date).localeCompare(String(b.date)));
+  }
+}
+
+function computePackageStats(pkgId, size) {
+  const used = consultCountByPkg.get(pkgId) || 0;
+  const left = Math.max(0, Number(size) - used);
+  return { used, left, status: left > 0 ? "Активен" : "Изчерпан" };
+}
+
   function getPatientName(patientId) {
-    const p = state.patients.find(x => x.patientId === patientId);
+    const p = patientMap.get(patientId);
     return p ? `${p.firstName} ${p.lastName}` : "(липсващ пациент)";
   }
 
@@ -779,16 +811,14 @@ select option:hover{
   }
 
   function buildRows() {
-    const q = (el("search").value || "").trim().toLowerCase();
-    const filter = el("filterStatus").value;
-    const sortBy = el("sortBy").value;
+  const q = (el("search").value || "").trim().toLowerCase();
+  const filter = el("filterStatus").value;
+  const sortBy = el("sortBy").value;
 
-    const patientMap = new Map(state.patients.map(p => [p.patientId, p]));
-
-    let rows = state.packages
-      .map(pkg => ({ pkg, p: patientMap.get(pkg.patientId) }))
-      .filter(x => x.p)
-      .filter(({p}) => !q || (`${p.firstName} ${p.lastName}`.toLowerCase().includes(q)));
+  let rows = state.packages
+    .map(pkg => ({ pkg, p: patientMap.get(pkg.patientId) }))
+    .filter(x => x.p)
+    .filter(({p}) => !q || (`${p.firstName} ${p.lastName}`.toLowerCase().includes(q)));
 
     if (filter !== "all") {
       rows = rows.filter(({pkg}) => {
@@ -819,58 +849,63 @@ select option:hover{
   }
 
   function renderTable() {
-    const tbody = el("packagesTable");
-    tbody.innerHTML = "";
+  const tbody = el("packagesTable");
+  tbody.innerHTML = "";
 
-    const rows = buildRows();
+  const rows = buildRows();
 
-    if (rows.length === 0) {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `<td colspan="5" style="color:var(--muted); padding: 18px 14px;">Няма резултати.</td>`;
-      tbody.appendChild(tr);
-      return;
-    }
-
-    for (const {pkg, p} of rows) {
-      const { used, left } = computePackageStats(pkg.packageId, pkg.size);
-
-      const statusBadge = left > 0
-        ? `<span class="badge ok"><span class="b"></span>Активен</span>`
-        : `<span class="badge warn"><span class="b"></span>Изчерпан</span>`;
-
-      const quickDisabled = left > 0 ? "disabled" : "";
-      const quickTitle = left > 0 ? "Отключва се при Изчерпан" : "Добавя нов пакет за същия пациент (днес)";
-      const quickClass = left > 0 ? "secondary" : "primary";
-
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>
-          <div style="display:flex;flex-direction:column;gap:4px;">
-            <div style="font-weight:600;">${escapeHtml(p.firstName + " " + p.lastName)}</div>
-          </div>
-        </td>
-        <td>${escapeHtml(formatDate(pkg.purchaseDate))}</td>
-        <td>${statusBadge}</td>
-        <td>
-          <div style="display:flex;align-items:center;gap:10px;">
-            <span class="badge" title="Проведени / Остават">${used} / ${left}</span>
-            <span style="font-size:12px;color:var(--muted);">Размер: ${Number(pkg.size)}</span>
-          </div>
-        </td>
-        <td class="right">
-          <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap;">
-            <button class="btn secondary small inline" data-action="details" data-id="${pkg.packageId}" style="width:auto;">Детайли</button>
-            <button class="btn ${quickClass} small inline" ${quickDisabled} title="${escapeHtml(quickTitle)}"
-              data-action="quickNew" data-id="${pkg.packageId}" style="width:auto;">
-              Нов пакет
-            </button>
-            <button class="btn danger small inline" data-action="deletePkg" data-id="${pkg.packageId}" style="width:auto;">Изтрий</button>
-          </div>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    }
+  if (rows.length === 0) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td colspan="5" style="color:var(--muted); padding: 18px 14px;">Няма резултати.</td>`;
+    tbody.appendChild(tr);
+    return;
   }
+
+  const frag = document.createDocumentFragment();
+
+  for (const { pkg, p } of rows) {
+    const { used, left } = computePackageStats(pkg.packageId, pkg.size);
+
+    const statusBadge = left > 0
+      ? `<span class="badge ok"><span class="b"></span>Активен</span>`
+      : `<span class="badge warn"><span class="b"></span>Изчерпан</span>`;
+
+    const quickDisabled = left > 0 ? "disabled" : "";
+    const quickTitle = left > 0 ? "Отключва се при Изчерпан" : "Добавя нов пакет за същия пациент (днес)";
+    const quickClass = left > 0 ? "secondary" : "primary";
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <div style="font-weight:600;">${escapeHtml(p.firstName + " " + p.lastName)}</div>
+        </div>
+      </td>
+      <td>${escapeHtml(formatDate(pkg.purchaseDate))}</td>
+      <td>${statusBadge}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="badge" title="Проведени / Остават">${used} / ${left}</span>
+          <span style="font-size:12px;color:var(--muted);">Размер: ${Number(pkg.size)}</span>
+        </div>
+      </td>
+      <td class="right">
+        <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap;">
+          <button class="btn secondary small inline" data-action="details" data-id="${pkg.packageId}" style="width:auto;">Детайли</button>
+          <button class="btn ${quickClass} small inline" ${quickDisabled} title="${escapeHtml(quickTitle)}"
+            data-action="quickNew" data-id="${pkg.packageId}" style="width:auto;">
+            Нов пакет
+          </button>
+          <button class="btn danger small inline" data-action="deletePkg" data-id="${pkg.packageId}" style="width:auto;">Изтрий</button>
+        </div>
+      </td>
+    `;
+
+    frag.appendChild(tr);
+  }
+
+  tbody.appendChild(frag);
+}
 
   // ✅ Auto-select в dropdown-ите само при ТОЧНО 1 съвпадение
   function autoSelectPatientFromSearch() {
@@ -897,10 +932,11 @@ select option:hover{
     setBusy(true);
     try {
       state = await api("getState");
-      setConn(true);
-      renderSelects();
-      renderMetrics();
-      renderTable();
+rebuildIndexes(); // ✅ важно
+setConn(true);
+renderSelects();
+renderMetrics();
+renderTable();
       autoSelectPatientFromSearch(); // ✅ ако има 1 match – избира
       if (modalPkgId) openDetails(modalPkgId, true);
     } catch (e) {
@@ -910,24 +946,13 @@ select option:hover{
     setBusy(false);
   }
 
-  async function exportToExcel() {
+async function exportToExcel() {
     try {
-      toast("ok", "Подготвям експорт…", "Зареждам библиотеката (само този път).");
+      toast("ok", "Подготвям експорт…", window.XLSX ? "" : "Зареждам библиотеката (само този път).");
 
       await loadXLSX(); // ✅ зарежда XLSX само при първия експорт
 
-      const patientMap = new Map(state.patients.map(p => [p.patientId, p]));
-
-      const consultsByPkg = new Map();
-      for (const c of state.consultations) {
-        const arr = consultsByPkg.get(c.packageId) || [];
-        arr.push(c);
-        consultsByPkg.set(c.packageId, arr);
-      }
-      for (const [pkgId, arr] of consultsByPkg.entries()) {
-        arr.sort((a,b) => String(a.date).localeCompare(String(b.date)));
-        consultsByPkg.set(pkgId, arr);
-      }
+ const consultsByPkgLocal = consultsByPkg; // вече е готов кеш
 
       const rows = state.packages
         .slice()
@@ -936,7 +961,7 @@ select option:hover{
           const pat = patientMap.get(pkg.patientId);
           const patientName = pat ? `${pat.firstName} ${pat.lastName}` : "(липсващ пациент)";
 
-          const consults = consultsByPkg.get(pkg.packageId) || [];
+          const consults = consultsByPkgLocal.get(pkg.packageId) || [];
           const done = consults.length;
           const left = Math.max(0, Number(pkg.size) - done);
           const status = left > 0 ? "Активен" : "Изчерпан";
@@ -964,53 +989,6 @@ select option:hover{
     } catch (e) {
       toast("err", "Експортът не успя", e.message || String(e));
     }
-  }
-
-
-    const patientMap = new Map(state.patients.map(p => [p.patientId, p]));
-
-    const consultsByPkg = new Map();
-    for (const c of state.consultations) {
-      const arr = consultsByPkg.get(c.packageId) || [];
-      arr.push(c);
-      consultsByPkg.set(c.packageId, arr);
-    }
-    for (const [pkgId, arr] of consultsByPkg.entries()) {
-      arr.sort((a,b) => String(a.date).localeCompare(String(b.date)));
-      consultsByPkg.set(pkgId, arr);
-    }
-
-    const rows = state.packages
-      .slice()
-      .sort((a,b) => String(a.purchaseDate).localeCompare(String(b.purchaseDate)))
-      .map(pkg => {
-        const pat = patientMap.get(pkg.patientId);
-        const patientName = pat ? `${pat.firstName} ${pat.lastName}` : "(липсващ пациент)";
-
-        const consults = consultsByPkg.get(pkg.packageId) || [];
-        const done = consults.length;
-        const left = Math.max(0, Number(pkg.size) - done);
-        const status = left > 0 ? "Активен" : "Изчерпан";
-
-        const consultDatesList = consults.map(c => formatDate(c.date)).join(", ");
-
-        return {
-          "Пациент": patientName,
-          "Дата покупка (пакет)": formatDate(pkg.purchaseDate),
-          "Дати консултации": consultDatesList,
-          "Проведени (в пакета)": done,
-          "Оставащи (в пакета)": left,
-          "Статус": status
-        };
-      });
-
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Packages");
-
-    const filename = `phone-consultations-${todayISO()}.xlsx`;
-    XLSX.writeFile(wb, filename);
-    toast("ok", "Експорт готов", filename);
   }
 
   // Modal
@@ -1048,10 +1026,7 @@ select option:hover{
 
     const list = el("dList");
     list.innerHTML = "";
-    const consults = state.consultations
-      .filter(c => c.packageId === pkg.packageId)
-      .slice()
-      .sort((a,b) => String(a.date).localeCompare(String(b.date)));
+const consults = consultsByPkg.get(pkg.packageId) || [];
 
     if (consults.length === 0) {
       list.innerHTML = `<div class="item" style="color:var(--muted);">Няма записани консултации.</div>`;
