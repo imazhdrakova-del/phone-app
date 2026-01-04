@@ -101,49 +101,51 @@
     .dot.err{ background: var(--danger); box-shadow: 0 0 0 4px rgba(239,68,68,.12); }
 
     /* Layout */
-    .grid{
-      margin-top: 16px;
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      align-items: start;
-    }
-    @media (max-width: 980px){
-      .grid{ grid-template-columns: 1fr; }
-      .brand{ min-width: unset; }
-      .searchbar{ min-width: unset; }
-    }
+ /* Layout */
+.grid{
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  align-items: start;
+}
 
-    /* ✅ Mobile topbar fix */
-    @media (max-width: 680px){
-      .topbar{
-        flex-wrap: wrap;
-        gap: 10px;
-      }
+@media (max-width: 980px){
+  .grid{ grid-template-columns: 1fr; }
+  .brand{ min-width: unset; }
+  .searchbar{ min-width: unset; }
+}
 
-      .brand{
-        min-width: 0;
-        flex: 1 1 auto;
-      }
+/* ✅ Mobile topbar fix (това оправя търсачката на телефона) */
+@media (max-width: 680px){
+  .topbar{
+    flex-wrap: wrap;
+    gap: 10px;
+  }
 
-      .top-actions{
-        margin-left: auto;
-        flex: 0 0 auto;
-      }
+  .brand{
+    min-width: 0;
+    flex: 1 1 auto;
+  }
 
-      .searchbar{
-        order: 3;
-        flex: 1 1 100%;
-        min-width: 0;
-      }
+  .top-actions{
+    margin-left: auto;
+    flex: 0 0 auto;
+  }
 
-      .searchbar .hint{ display:none; }
+  .searchbar{
+    order: 3;
+    flex: 1 1 100%;
+    min-width: 0;
+  }
 
-      .searchbar input{
-        color: var(--text) !important;
-        -webkit-text-fill-color: var(--text) !important;
-      }
-    }
+  .searchbar .hint{ display:none; }
+
+  .searchbar input{
+    color: var(--text) !important;
+    -webkit-text-fill-color: var(--text) !important;
+  }
+}
 
     /* Cards */
     .card{
