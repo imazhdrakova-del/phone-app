@@ -181,7 +181,7 @@
       padding: 10px 12px;
       border-radius: 12px;
       border: 1px solid rgba(148,163,184,.18);
-      background: rgba(2,6,23,.35);
+      background: rgba(2,6,23,.55);
       color: var(--text);
       outline: none;
       font-size: 14px;
@@ -198,7 +198,21 @@
       background-repeat:no-repeat;
       padding-right: 34px;
     }
+/* ✅ Четими dropdown опции – тъмен фон + светъл текст */
+select option{
+  background:#0b1220;
+  color:var(--text);
+}
 
+select option:checked{
+  background: rgba(96,165,250,.22);
+  color: var(--text);
+}
+
+select option:hover{
+  background: rgba(96,165,250,.14);
+  color: var(--text);
+}
     .btn-row{ display:flex; gap:10px; }
     .btn{
       cursor:pointer;
