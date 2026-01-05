@@ -589,6 +589,7 @@
           <div class="card-header">
             <div>
               <h2 class="card-title">Нов пациент</h2>
+              <div class="card-desc">Добави пациент с име и фамилия.</div>
             </div>
           </div>
 
@@ -900,28 +901,52 @@
           return p ? `${p.firstName} ${p.lastName}` : "(липсващ пациент)";
         }
 
+function normName(s) {
+  return String(s || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
         function renderSelects() {
-          const patients = state.patients
-            .filter((p) => !safeBool(p.archived))
-            .slice()
-            .sort((a, b) => (`${a.firstName} ${a.lastName}`).localeCompare(`${b.firstName} ${b.lastName}`, "bg"));
+  const s = el("patientSelected");
+  if (!s) return;
 
-          const s = el("patientSelected");
-          if (!s) return;
+  const current = s.value;
 
-          const current = s.value;
-          s.innerHTML = "";
+  // 1) активни пациенти
+  const active = state.patients.filter((p) => !safeBool(p.archived));
 
-          for (const p of patients) {
-            const o = document.createElement("option");
-            o.value = p.patientId;
-            o.textContent = `${p.firstName} ${p.lastName}`;
-            s.appendChild(o);
-          }
+  // 2) дедуп по име+фамилия
+  const seen = new Set();
+  const unique = [];
 
-          if (current && patients.some((p) => p.patientId === current)) s.value = current;
-          s.disabled = patients.length === 0;
-        }
+  for (const p of active) {
+    const key = `${normName(p.firstName)}|${normName(p.lastName)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(p);
+  }
+
+  // 3) сортиране
+  unique.sort((a, b) =>
+    (`${a.firstName} ${a.lastName}`).localeCompare(`${b.firstName} ${b.lastName}`, "bg")
+  );
+
+  // 4) рендер
+  s.innerHTML = "";
+  for (const p of unique) {
+    const o = document.createElement("option");
+    o.value = p.patientId;
+    o.textContent = `${p.firstName} ${p.lastName}`;
+    s.appendChild(o);
+  }
+
+  // 5) възстанови избора ако е възможно
+  if (current && unique.some((p) => p.patientId === current)) s.value = current;
+
+  s.disabled = unique.length === 0;
+}
 
         function buildRows() {
           const q = (el("search").value || "").trim().toLowerCase();
@@ -1020,21 +1045,34 @@
         }
 
         // ✅ Auto-select само при ТОЧНО 1 съвпадение
-        function autoSelectPatientFromSearch() {
-          const q = (el("search").value || "").trim().toLowerCase();
-          if (!q) return;
+function autoSelectPatientFromSearch() {
+  const qRaw = (el("search").value || "").trim().replace(/\s+/g, " ");
+  const q = qRaw.toLowerCase();
+  if (!q) return;
 
-          const activePatients = state.patients.filter((p) => !safeBool(p.archived));
-          const matches = activePatients
-            .map((p) => ({ id: p.patientId, name: `${p.firstName} ${p.lastName}` }))
-            .filter((x) => x.name.toLowerCase().includes(q));
+  const s = el("patientSelected");
+  if (!s) return;
 
-          if (matches.length !== 1) return;
+  const activePatients = state.patients.filter((p) => !safeBool(p.archived));
 
-          const chosen = matches[0];
-          const s = el("patientSelected");
-          if (s && Array.from(s.options).some((o) => o.value === chosen.id)) s.value = chosen.id;
-        }
+  const matches = activePatients
+    .map((p) => {
+      const first = (p.firstName || "").trim();
+      const last = (p.lastName || "").trim();
+      const full = `${first} ${last}`.trim();
+      return { id: p.patientId, fullL: full.toLowerCase() };
+    })
+    .filter((x) => x.fullL.includes(q)); // ✅ contains (по средата)
+
+  // ✅ auto-select само при ТОЧНО 1 match
+  if (matches.length !== 1) return;
+
+  const chosen = matches[0];
+
+  if (Array.from(s.options).some((o) => o.value === chosen.id)) {
+    s.value = chosen.id;
+  }
+}
 
         async function refresh() {
           setBusy(true);
@@ -1278,40 +1316,66 @@
         el("exportBtnTop").addEventListener("click", exportToExcel);
         el("modalExportBtn").addEventListener("click", exportToExcel);
 
-        el("addPatientBtn").addEventListener("click", async () => {
-          const full = (el("fullName").value || "").trim().replace(/\s+/g, " ");
-          if (!full) return toast("warn", "Липсва име", "Въведи име и фамилия.");
+function patientExists(firstName, lastName) {
+  const f = firstName.trim().toLowerCase();
+  const l = lastName.trim().toLowerCase();
 
-          const parts = full.split(" ");
-          if (parts.length < 2) return toast("warn", "Непълно име", "Въведи поне две думи (име и фамилия).");
+  return state.patients.some((p) =>
+    !safeBool(p.archived) &&
+    p.firstName.trim().toLowerCase() === f &&
+    p.lastName.trim().toLowerCase() === l
+  );
+}
 
-          const firstName = parts[0];
-          const lastName = parts.slice(1).join(" ");
+       el("addPatientBtn").addEventListener("click", async () => {
+  const full = (el("fullName").value || "").trim().replace(/\s+/g, " ");
+  if (!full) return toast("warn", "Липсва име", "Въведи име и фамилия.");
 
-          setBusy(true);
-          try {
-            const r = await api("addPatient", { firstName, lastName });
+  const parts = full.split(" ");
+  if (parts.length < 2) {
+    return toast("warn", "Непълно име", "Въведи поне име и фамилия.");
+  }
 
-            el("fullName").value = "";
-            toast("ok", "Пациент добавен", `${firstName} ${lastName}`);
+  const firstName = parts[0];
+  const lastName = parts.slice(1).join(" ");
 
-            state.patients.unshift({
-              patientId: r.patientId,
-              firstName,
-              lastName,
-              archived: false,
-              createdAt: new Date().toISOString(),
-            });
+  // ✅ DUPLICATE CHECK
+  if (patientExists(firstName, lastName)) {
+    return toast(
+      "err",
+      "Пациентът вече съществува",
+      `${firstName} ${lastName} вече е регистриран`
+    );
+  }
 
-            rebuildIndexes();
-            renderSelects();
-            renderTable();
-            autoSelectPatientFromSearch();
-          } catch (e) {
-            toast("err", "Грешка", e.message);
-          }
-          setBusy(false);
-        });
+  setBusy(true);
+
+  try {
+    const r = await api("addPatient", { firstName, lastName });
+
+    el("fullName").value = "";
+
+    toast("ok", "Пациент добавен", `${firstName} ${lastName}`);
+
+    // локален update
+    state.patients.unshift({
+      patientId: r.patientId,
+      firstName,
+      lastName,
+      archived: false,
+      createdAt: new Date().toISOString(),
+    });
+
+    rebuildIndexes();
+    renderSelects();
+    renderTable();
+    autoSelectPatientFromSearch();
+  } catch (e) {
+    toast("err", "Грешка", e.message);
+  }
+
+  setBusy(false);
+});
 
         el("addPackageBtn").addEventListener("click", async () => {
           const patientId = el("patientSelected").value;
@@ -1412,4 +1476,3 @@
     </script>
   </body>
 </html>
-
