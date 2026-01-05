@@ -3,15 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    
-    <!-- Performance hints -->
-    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-    <link rel="dns-prefetch" href="/.netlify">
-    
     <title>Телефонни консултации</title>
 
-    <!-- Critical CSS only - above the fold -->
     <style>
       :root{
         --bg:#0b1220;
@@ -35,9 +28,10 @@
       }
 
       *{ box-sizing:border-box; }
-      html,body{ height:100%; margin:0; }
+      html,body{ height:100%; }
 
       body{
+        margin:0;
         font-family:var(--font);
         color:var(--text);
         background:
@@ -47,8 +41,13 @@
           linear-gradient(180deg, #070b16, #050815);
       }
 
-      .container{ max-width: 1200px; margin: 0 auto; padding: 22px; }
+      .container{
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 22px;
+      }
 
+      /* Topbar */
       .topbar{
         display:flex;
         gap:14px;
@@ -65,7 +64,12 @@
         z-index: 50;
       }
 
-      .brand{ display:flex; align-items:center; gap:12px; min-width: 220px; }
+      .brand{
+        display:flex;
+        align-items:center;
+        gap:12px;
+        min-width: 220px;
+      }
 
       .logo{
         width:40px;
@@ -79,14 +83,12 @@
         box-shadow: 0 10px 25px rgba(0,0,0,.35);
       }
 
-      .brand h1{ margin:0; font-size: 16px; letter-spacing: .2px; }
-    </style>
+      .brand h1{
+        margin:0;
+        font-size: 16px;
+        letter-spacing: .2px;
+      }
 
-    <!-- Non-critical CSS loaded asynchronously -->
-    <link rel="preload" href="data:text/css;base64,LmJ1c3ktb3ZlcmxheXtwb3NpdGlvbjpmaXhlZDtpbnNldDowO2Rpc3BsYXk6bm9uZTtiYWNrZ3JvdW5kOnJnYmEoMiw2LDIzLC4yNSk7YmFja2Ryb3AtZmlsdGVyOmJsdXIoMnB4KTt6LWluZGV4OjE1MH1ib2R5LmJ1c3kgLmJ1c3ktb3ZlcmxheXtkaXNwbGF5OmJsb2NrfS5zcGlubmVye3Bvc2l0aW9uOmFic29sdXRlO3JpZ2h0OjE4cHg7dG9wOjE4cHg7d2lkdGg6MzJweDtoZWlnaHQ6MzJweDtib3JkZXItcmFkaXVzOjk5OXB4O2JvcmRlcjozcHggc29saWQgcmdiYSgxNDgsMTYzLDE4NCwuMjUpO2JvcmRlci10b3AtY29sb3I6cmdiYSg5NiwxNjUsMjUwLC44NSk7YW5pbWF0aW9uOnNwaW4gMXMgbGluZWFyIGluZmluaXRlfUBrZXlmcmFtZXMgc3Bpbntmcm9te3RyYW5zZm9ybTpyb3RhdGUoMGRlZyl9dG97dHJhbnNmb3JtOnJvdGF0ZSgzNjBkZWcpfX0=" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="data:text/css;base64,LmJ1c3ktb3ZlcmxheXtwb3NpdGlvbjpmaXhlZDtpbnNldDowO2Rpc3BsYXk6bm9uZTtiYWNrZ3JvdW5kOnJnYmEoMiw2LDIzLC4yNSk7YmFja2Ryb3AtZmlsdGVyOmJsdXIoMnB4KTt6LWluZGV4OjE1MH1ib2R5LmJ1c3kgLmJ1c3ktb3ZlcmxheXtkaXNwbGF5OmJsb2NrfS5zcGlubmVye3Bvc2l0aW9uOmFic29sdXRlO3JpZ2h0OjE4cHg7dG9wOjE4cHg7d2lkdGg6MzJweDtoZWlnaHQ6MzJweDtib3JkZXItcmFkaXVzOjk5OXB4O2JvcmRlcjozcHggc29saWQgcmdiYSgxNDgsMTYzLDE4NCwuMjUpO2JvcmRlci10b3AtY29sb3I6cmdiYSg5NiwxNjUsMjUwLC44NSk7YW5pbWF0aW9uOnNwaW4gMXMgbGluZWFyIGluZmluaXRlfUBrZXlmcmFtZXMgc3Bpbntmcm9te3RyYW5zZm9ybTpyb3RhdGUoMGRlZyl9dG97dHJhbnNmb3JtOnJvdGF0ZSgzNjBkZWcpfX0="></noscript>
-
-    <style>
       .searchbar{
         flex: 1;
         display:flex;
@@ -146,6 +148,7 @@
         box-shadow: 0 0 0 4px rgba(239,68,68,.12);
       }
 
+      /* Layout */
       .grid{
         margin-top: 16px;
         display:grid;
@@ -160,6 +163,7 @@
         .searchbar{ min-width: unset; }
       }
 
+      /* ✅ Mobile topbar fix */
       @media (max-width: 680px){
         .topbar{ flex-wrap: wrap; gap: 10px; }
         .brand{ min-width: 0; flex: 1 1 auto; }
@@ -172,6 +176,7 @@
         }
       }
 
+      /* Cards */
       .card{
         border-radius: var(--radius);
         border: 1px solid var(--border);
@@ -204,6 +209,7 @@
 
       .card-body{ padding: 14px; }
 
+      /* Ops UI */
       .ops-grid{
         display:grid;
         grid-template-columns: 1fr 1fr;
@@ -229,6 +235,7 @@
         margin-bottom: 10px;
       }
 
+      /* Form */
       .form-grid{
         display:grid;
         grid-template-columns: 1fr 1fr;
@@ -275,6 +282,7 @@
         padding-right: 34px;
       }
 
+      /* ✅ Четими dropdown опции – тъмен фон + светъл текст */
       select option{ background:#0b1220; color:var(--text); }
       select option:checked{ background: rgba(96,165,250,.22); color: var(--text); }
 
@@ -324,6 +332,7 @@
         .btn{ padding: 12px 12px; }
       }
 
+      /* Table */
       .table-card{ margin-top: 14px; }
 
       .table-head{
@@ -393,6 +402,7 @@
 
       .mono{ font-family: var(--mono); }
 
+      /* Toast */
       .toast{
         position: fixed;
         right: 18px;
@@ -415,6 +425,33 @@
       .toast.warn{ border-color: rgba(245,158,11,.25); }
       .toast.err{ border-color: rgba(239,68,68,.30); }
 
+      /* Busy overlay */
+      .busy-overlay{
+        position: fixed;
+        inset: 0;
+        display:none;
+        background: rgba(2,6,23,.25);
+        backdrop-filter: blur(2px);
+        z-index: 150;
+      }
+
+      body.busy .busy-overlay{ display:block; }
+
+      .spinner{
+        position:absolute;
+        right: 18px;
+        top: 18px;
+        width: 32px;
+        height: 32px;
+        border-radius: 999px;
+        border: 3px solid rgba(148,163,184,.25);
+        border-top-color: rgba(96,165,250,.85);
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin { to { transform: rotate(360deg);} }
+
+      /* Modal */
       .modal-backdrop{
         position: fixed;
         inset: 0;
@@ -547,6 +584,7 @@
       </div>
 
       <div class="grid">
+        <!-- Нов пациент -->
         <div class="card">
           <div class="card-header">
             <div>
@@ -570,6 +608,7 @@
           </div>
         </div>
 
+        <!-- Операции (без header, както искаш) -->
         <div class="card">
           <div class="card-body">
             <div class="form-grid" style="grid-template-columns: 1fr;">
@@ -580,6 +619,7 @@
             </div>
 
             <div class="ops-grid" style="margin-top:12px;">
+              <!-- Пакет -->
               <div class="ops-panel">
                 <div class="ops-title">Добави пакет</div>
 
@@ -600,6 +640,7 @@
                 </div>
               </div>
 
+              <!-- Консултация -->
               <div class="ops-panel">
                 <div class="ops-title">Добави консултация</div>
 
@@ -673,6 +714,7 @@
       </div>
     </div>
 
+    <!-- Modal -->
     <div class="modal-backdrop" id="modalBackdrop" aria-hidden="true">
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
         <div class="modal-header">
@@ -703,7 +745,7 @@
               </div>
 
               <div style="margin-top:10px; font-size:12px; color:var(--muted);">
-                "Нов пакет (бързо)" се активира само когато пакетът е изчерпан.
+                “Нов пакет (бързо)” се активира само когато пакетът е изчерпан.
               </div>
             </div>
 
@@ -715,3 +757,659 @@
         </div>
 
         <div class="modal-footer">
+          <div style="font-size:12px;color:var(--muted);">
+            ID: <span class="mono" id="dPkgId">—</span>
+          </div>
+
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn secondary small inline" id="modalExportBtn" type="button">Експорт</button>
+            <button class="btn secondary small inline" id="modalCloseBtn2" type="button">Затвори</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast">
+      <p class="t" id="toastTitle">—</p>
+      <p class="d" id="toastDesc"></p>
+    </div>
+
+    <script>
+      (() => {
+        const SCRIPT_URL = "/.netlify/functions/api";
+
+        let state = { patients: [], packages: [] };
+        let consultCountByPkg = new Map();
+        let consultsByPkg = new Map();
+        let patientMap = new Map();
+
+        let modalPkgId = null;
+
+        const el = (id) => document.getElementById(id);
+
+        // ✅ Lazy-load SheetJS (XLSX) само при експорт
+        function loadXLSX() {
+          if (window.XLSX) return Promise.resolve(window.XLSX);
+          if (loadXLSX._promise) return loadXLSX._promise;
+
+          loadXLSX._promise = new Promise((resolve, reject) => {
+            const s = document.createElement("script");
+            s.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+            s.async = true;
+            s.onload = () => (window.XLSX ? resolve(window.XLSX) : reject(new Error("XLSX се зареди, но липсва window.XLSX")));
+            s.onerror = () => reject(new Error("Не успях да заредя XLSX библиотеката (CDN)."));
+            document.head.appendChild(s);
+          });
+
+          return loadXLSX._promise;
+        }
+
+        function setBusy(v) {
+          document.body.classList.toggle("busy", v);
+        }
+
+        function toast(kind, title, desc = "") {
+          const t = el("toast");
+          const tt = el("toastTitle");
+          const td = el("toastDesc");
+
+          t.className = "toast show " + (kind || "");
+          tt.textContent = title;
+          td.textContent = desc || "";
+
+          clearTimeout(toast._timer);
+          toast._timer = setTimeout(() => (t.className = "toast"), 2600);
+        }
+
+        function setConn(ok, msg = "") {
+          el("connDot").className = "dot" + (ok ? "" : " err");
+          el("connText").textContent = ok ? "Свързан" : (msg || "Проблем");
+        }
+
+        function formatDate(iso) {
+          if (!iso) return "";
+          const d = new Date(iso);
+          const pad = (n) => String(n).padStart(2, "0");
+          return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`;
+        }
+
+        function todayISO() {
+          const now = new Date();
+          const offsetMs = now.getTimezoneOffset() * 60_000;
+          const local = new Date(now.getTime() - offsetMs);
+          return local.toISOString().slice(0, 10);
+        }
+
+        function safeBool(v) {
+          return String(v).toLowerCase() === "true";
+        }
+
+        async function api(action, payload = {}) {
+          const res = await fetch(SCRIPT_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action, payload }),
+          });
+
+          const contentType = res.headers.get("content-type") || "";
+          const text = await res.text();
+
+          if (!contentType.includes("application/json")) {
+            throw new Error("Server error (non-JSON response). Провери Netlify Functions логовете.");
+          }
+
+          const json = JSON.parse(text);
+          if (!json.ok) throw new Error(json.error || "API error");
+          return json.data;
+        }
+
+        function escapeHtml(s) {
+          return String(s ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+        }
+
+        function buildConsultsByPkgMap(consultations) {
+          const map = new Map();
+          for (const c of (consultations || [])) {
+            const id = c.packageId;
+            const arr = map.get(id) || [];
+            arr.push(c);
+            map.set(id, arr);
+          }
+          for (const [id, arr] of map.entries()) {
+            arr.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+          }
+          return map;
+        }
+
+        function rebuildIndexes() {
+          patientMap = new Map(state.patients.map((p) => [p.patientId, p]));
+        }
+
+        function computePackageStats(pkgId, size) {
+          const used = consultCountByPkg.get(pkgId) || 0;
+          const left = Math.max(0, Number(size) - used);
+          return { used, left, status: left > 0 ? "Активен" : "Изчерпан" };
+        }
+
+        function getPatientName(patientId) {
+          const p = patientMap.get(patientId);
+          return p ? `${p.firstName} ${p.lastName}` : "(липсващ пациент)";
+        }
+
+        function renderSelects() {
+          const patients = state.patients
+            .filter((p) => !safeBool(p.archived))
+            .slice()
+            .sort((a, b) => (`${a.firstName} ${a.lastName}`).localeCompare(`${b.firstName} ${b.lastName}`, "bg"));
+
+          const s = el("patientSelected");
+          if (!s) return;
+
+          const current = s.value;
+          s.innerHTML = "";
+
+          for (const p of patients) {
+            const o = document.createElement("option");
+            o.value = p.patientId;
+            o.textContent = `${p.firstName} ${p.lastName}`;
+            s.appendChild(o);
+          }
+
+          if (current && patients.some((p) => p.patientId === current)) s.value = current;
+          s.disabled = patients.length === 0;
+        }
+
+        function buildRows() {
+          const q = (el("search").value || "").trim().toLowerCase();
+          const filter = el("filterStatus").value;
+          const sortBy = el("sortBy").value;
+
+          let rows = state.packages
+            .map((pkg) => ({ pkg, p: patientMap.get(pkg.patientId) }))
+            .filter((x) => x.p)
+            .filter(({ p }) => !q || (`${p.firstName} ${p.lastName}`.toLowerCase().includes(q)));
+
+          if (filter !== "all") {
+            rows = rows.filter(({ pkg }) => {
+              const { left } = computePackageStats(pkg.packageId, pkg.size);
+              return filter === "active" ? left > 0 : left === 0;
+            });
+          }
+
+          rows.sort((a, b) => {
+            const aName = `${a.p.firstName} ${a.p.lastName}`;
+            const bName = `${b.p.firstName} ${b.p.lastName}`;
+            const aStats = computePackageStats(a.pkg.packageId, a.pkg.size);
+            const bStats = computePackageStats(b.pkg.packageId, b.pkg.size);
+
+            if (sortBy === "date_asc") return String(a.pkg.purchaseDate).localeCompare(String(b.pkg.purchaseDate));
+            if (sortBy === "date_desc") return String(b.pkg.purchaseDate).localeCompare(String(a.pkg.purchaseDate));
+            if (sortBy === "patient_asc") return aName.localeCompare(bName, "bg");
+
+            if (sortBy === "status") {
+              const aVal = aStats.left > 0 ? 0 : 1;
+              const bVal = bStats.left > 0 ? 0 : 1;
+              if (aVal !== bVal) return aVal - bVal;
+              return String(b.pkg.purchaseDate).localeCompare(String(a.pkg.purchaseDate));
+            }
+
+            return 0;
+          });
+
+          return rows;
+        }
+
+        function renderTable() {
+          const tbody = el("packagesTable");
+          tbody.innerHTML = "";
+
+          const rows = buildRows();
+
+          if (rows.length === 0) {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `<td colspan="5" style="color:var(--muted); padding: 18px 14px;">Няма резултати.</td>`;
+            tbody.appendChild(tr);
+            return;
+          }
+
+          const frag = document.createDocumentFragment();
+
+          for (const { pkg, p } of rows) {
+            const { used, left } = computePackageStats(pkg.packageId, pkg.size);
+
+            const statusBadge =
+              left > 0
+                ? `<span class="badge ok"><span class="b"></span>Активен</span>`
+                : `<span class="badge warn"><span class="b"></span>Изчерпан</span>`;
+
+            const quickDisabled = left > 0 ? "disabled" : "";
+            const quickTitle = left > 0 ? "Отключва се при Изчерпан" : "Добавя нов пакет за същия пациент (днес)";
+            const quickClass = left > 0 ? "secondary" : "primary";
+
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td>
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                  <div style="font-weight:600;">${escapeHtml(p.firstName + " " + p.lastName)}</div>
+                </div>
+              </td>
+              <td>${escapeHtml(formatDate(pkg.purchaseDate))}</td>
+              <td>${statusBadge}</td>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <span class="badge" title="Проведени / Остават">${used} / ${left}</span>
+                  <span style="font-size:12px;color:var(--muted);">Размер: ${Number(pkg.size)}</span>
+                </div>
+              </td>
+              <td class="right">
+                <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap;">
+                  <button class="btn secondary small inline" data-action="details" data-id="${pkg.packageId}" style="width:auto;" type="button">Детайли</button>
+                  <button class="btn ${quickClass} small inline" ${quickDisabled} title="${escapeHtml(quickTitle)}" data-action="quickNew" data-id="${pkg.packageId}" style="width:auto;" type="button">Нов пакет</button>
+                  <button class="btn danger small inline" data-action="deletePkg" data-id="${pkg.packageId}" style="width:auto;" type="button">Изтрий</button>
+                </div>
+              </td>
+            `;
+            frag.appendChild(tr);
+          }
+
+          tbody.appendChild(frag);
+        }
+
+        // ✅ Auto-select само при ТОЧНО 1 съвпадение
+        function autoSelectPatientFromSearch() {
+          const q = (el("search").value || "").trim().toLowerCase();
+          if (!q) return;
+
+          const activePatients = state.patients.filter((p) => !safeBool(p.archived));
+          const matches = activePatients
+            .map((p) => ({ id: p.patientId, name: `${p.firstName} ${p.lastName}` }))
+            .filter((x) => x.name.toLowerCase().includes(q));
+
+          if (matches.length !== 1) return;
+
+          const chosen = matches[0];
+          const s = el("patientSelected");
+          if (s && Array.from(s.options).some((o) => o.value === chosen.id)) s.value = chosen.id;
+        }
+
+        async function refresh() {
+          setBusy(true);
+
+          try {
+            const data = await api("getStateLite");
+            state.patients = data.patients || [];
+            state.packages = data.packages || [];
+
+            consultCountByPkg = new Map(
+              Object.entries(data.consultCountByPkg || {}).map(([k, v]) => [k, Number(v) || 0])
+            );
+            consultsByPkg = new Map();
+
+            rebuildIndexes();
+            setConn(true);
+
+            renderSelects();
+            renderTable();
+            autoSelectPatientFromSearch();
+
+            if (modalPkgId) openDetails(modalPkgId, true);
+          } catch (e) {
+            setConn(false, "Грешка");
+            toast("err", "Грешка при зареждане", e.message);
+          }
+
+          setBusy(false);
+        }
+
+        async function exportToExcel() {
+          try {
+            toast("ok", "Подготвям експорт…", window.XLSX ? "" : "Зареждам библиотеката (само този път).");
+            await loadXLSX();
+
+            toast("ok", "Експорт…", "Зареждам всички консултации (по-бавно).");
+            const full = await api("getState");
+
+            const patientsFull = full.patients || [];
+            const packagesFull = full.packages || [];
+            const consultationsFull = full.consultations || [];
+
+            const patientMapLocal = new Map(patientsFull.map((p) => [p.patientId, p]));
+            const consultsByPkgLocal = buildConsultsByPkgMap(consultationsFull);
+
+            const rows = packagesFull
+              .slice()
+              .sort((a, b) => String(a.purchaseDate).localeCompare(String(b.purchaseDate)))
+              .map((pkg) => {
+                const pat = patientMapLocal.get(pkg.patientId);
+                const patientName = pat ? `${pat.firstName} ${pat.lastName}` : "(липсващ пациент)";
+
+                const consults = consultsByPkgLocal.get(pkg.packageId) || [];
+                const done = consults.length;
+                const left = Math.max(0, Number(pkg.size) - done);
+                const status = left > 0 ? "Активен" : "Изчерпан";
+                const consultDatesList = consults.map((c) => formatDate(c.date)).join(", ");
+
+                return {
+                  "Пациент": patientName,
+                  "Дата покупка (пакет)": formatDate(pkg.purchaseDate),
+                  "Дати консултации": consultDatesList,
+                  "Проведени (в пакета)": done,
+                  "Оставащи (в пакета)": left,
+                  "Статус": status,
+                };
+              });
+
+            const ws = XLSX.utils.json_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Packages");
+
+            const filename = `phone-consultations-${todayISO()}.xlsx`;
+            XLSX.writeFile(wb, filename);
+
+            toast("ok", "Експорт готов", filename);
+          } catch (e) {
+            toast("err", "Експортът не успя", e.message || String(e));
+          }
+        }
+
+        // Modal
+        function showModal(show) {
+          const b = el("modalBackdrop");
+          b.classList.toggle("show", show);
+          b.setAttribute("aria-hidden", show ? "false" : "true");
+          if (!show) modalPkgId = null;
+        }
+
+        async function openDetails(pkgId, silent = false) {
+          const pkg = state.packages.find((p) => p.packageId === pkgId);
+          if (!pkg) {
+            if (!silent) toast("err", "Липсва пакет", "Не е намерен.");
+            return;
+          }
+
+          modalPkgId = pkgId;
+
+          if (consultsByPkg.size === 0) {
+            try {
+              setBusy(true);
+              const full = await api("getState");
+              consultsByPkg = buildConsultsByPkgMap(full.consultations || []);
+            } catch (e) {
+              toast("err", "Грешка при детайли", e.message);
+            } finally {
+              setBusy(false);
+            }
+          }
+
+          const patientName = getPatientName(pkg.patientId);
+          const { used, left } = computePackageStats(pkg.packageId, pkg.size);
+
+          el("modalTitle").textContent = "Детайли за пакет";
+          el("modalSub").textContent = `${patientName} • покупка: ${formatDate(pkg.purchaseDate)}`;
+
+          el("dPatient").textContent = patientName;
+          el("dPurchase").textContent = formatDate(pkg.purchaseDate);
+          el("dSize").textContent = String(Number(pkg.size));
+          el("dDone").textContent = String(used);
+          el("dLeft").textContent = String(left);
+
+          el("dStatus").innerHTML =
+            left > 0
+              ? `<span class="badge ok"><span class="b"></span>Активен</span>`
+              : `<span class="badge warn"><span class="b"></span>Изчерпан</span>`;
+
+          el("dPkgId").textContent = pkg.packageId;
+
+          const list = el("dList");
+          list.innerHTML = "";
+
+          const consults = consultsByPkg.get(pkg.packageId) || [];
+
+          if (consults.length === 0) {
+            list.innerHTML = `<div class="item" style="color:var(--muted);">Няма записани консултации.</div>`;
+          } else {
+            for (const c of consults) {
+              const div = document.createElement("div");
+              div.className = "item";
+              div.innerHTML = `<span>${escapeHtml(formatDate(c.date))}</span>`;
+              list.appendChild(div);
+            }
+          }
+
+          const quickBtn = el("dQuickNewBtn");
+          quickBtn.disabled = left > 0;
+          quickBtn.title = left > 0 ? "Отключва се при Изчерпан" : "Добавя нов пакет (днес) със същия размер";
+
+          showModal(true);
+        }
+
+        function closeModal() {
+          showModal(false);
+        }
+
+        async function deletePackage(packageId) {
+          const ok = confirm("Сигурен ли си, че искаш да изтриеш този пакет? Това ще изтрие и консултациите към него.");
+          if (!ok) return;
+
+          setBusy(true);
+          try {
+            await api("deletePackage", { packageId });
+            toast("ok", "Пакет изтрит", "Данните са обновени.");
+            closeModal();
+            await refresh();
+          } catch (e) {
+            toast("err", "Грешка", e.message);
+          }
+          setBusy(false);
+        }
+
+        async function quickNewPackageFromOld(oldPkgId) {
+          const oldPkg = state.packages.find((p) => p.packageId === oldPkgId);
+          if (!oldPkg) return toast("err", "Липсва пакет", "Не е намерен.");
+
+          const { left } = computePackageStats(oldPkg.packageId, oldPkg.size);
+          if (left > 0) return toast("warn", "Пакетът не е изчерпан", "„Нов пакет“ се отключва при Изчерпан.");
+
+          const patientName = getPatientName(oldPkg.patientId);
+          const ok = confirm(`Да добавя ли нов пакет за ${patientName} (днес, размер: ${Number(oldPkg.size)})?`);
+          if (!ok) return;
+
+          setBusy(true);
+          try {
+            const purchaseDate = todayISO();
+            const size = Number(oldPkg.size);
+
+            const r = await api("addPackage", { patientId: oldPkg.patientId, purchaseDate, size });
+
+            state.packages.unshift({
+              packageId: r.packageId,
+              patientId: oldPkg.patientId,
+              purchaseDate,
+              size,
+              archived: false,
+              createdAt: new Date().toISOString(),
+            });
+
+            consultCountByPkg.set(r.packageId, 0);
+
+            toast("ok", "Нов пакет добавен", `${patientName} • ${formatDate(purchaseDate)}`);
+            renderTable();
+          } catch (e) {
+            toast("err", "Грешка", e.message);
+          }
+          setBusy(false);
+        }
+
+        // Defaults
+        el("packageDate").value = todayISO();
+        el("consultDate").value = todayISO();
+
+        el("todayBtn").addEventListener("click", () => {
+          el("consultDate").value = todayISO();
+          toast("ok", "Дата зададена", "Консултация: днес");
+        });
+
+        el("clearPatientBtn").addEventListener("click", () => {
+          el("fullName").value = "";
+        });
+
+        el("fullName").addEventListener("keydown", (e) => {
+          if (e.key === "Enter") el("addPatientBtn").click();
+        });
+
+        // search -> filter + auto-select only when exactly 1 match
+        el("search").addEventListener("input", () => {
+          renderTable();
+          autoSelectPatientFromSearch();
+        });
+
+        el("search").addEventListener("keydown", (e) => {
+          if (e.key === "Enter") autoSelectPatientFromSearch();
+        });
+
+        el("filterStatus").addEventListener("change", renderTable);
+        el("sortBy").addEventListener("change", renderTable);
+
+        el("exportBtn").addEventListener("click", exportToExcel);
+        el("exportBtnTop").addEventListener("click", exportToExcel);
+        el("modalExportBtn").addEventListener("click", exportToExcel);
+
+        el("addPatientBtn").addEventListener("click", async () => {
+          const full = (el("fullName").value || "").trim().replace(/\s+/g, " ");
+          if (!full) return toast("warn", "Липсва име", "Въведи име и фамилия.");
+
+          const parts = full.split(" ");
+          if (parts.length < 2) return toast("warn", "Непълно име", "Въведи поне две думи (име и фамилия).");
+
+          const firstName = parts[0];
+          const lastName = parts.slice(1).join(" ");
+
+          setBusy(true);
+          try {
+            const r = await api("addPatient", { firstName, lastName });
+
+            el("fullName").value = "";
+            toast("ok", "Пациент добавен", `${firstName} ${lastName}`);
+
+            state.patients.unshift({
+              patientId: r.patientId,
+              firstName,
+              lastName,
+              archived: false,
+              createdAt: new Date().toISOString(),
+            });
+
+            rebuildIndexes();
+            renderSelects();
+            renderTable();
+            autoSelectPatientFromSearch();
+          } catch (e) {
+            toast("err", "Грешка", e.message);
+          }
+          setBusy(false);
+        });
+
+        el("addPackageBtn").addEventListener("click", async () => {
+          const patientId = el("patientSelected").value;
+          const purchaseDate = el("packageDate").value;
+          const size = Number(el("packageSize").value || 5);
+
+          if (!patientId) return toast("warn", "Няма пациент", "Добави пациент първо.");
+          if (!purchaseDate) return toast("warn", "Липсва дата", "Избери дата на покупка.");
+          if (!Number.isFinite(size) || size < 1) return toast("warn", "Невалиден размер", "Въведи число >= 1.");
+
+          setBusy(true);
+          try {
+            const r = await api("addPackage", { patientId, purchaseDate, size });
+
+            toast("ok", "Пакет добавен", `${formatDate(purchaseDate)} • ${size} консултации`);
+
+            state.packages.unshift({
+              packageId: r.packageId,
+              patientId,
+              purchaseDate,
+              size,
+              archived: false,
+              createdAt: new Date().toISOString(),
+            });
+
+            consultCountByPkg.set(r.packageId, 0);
+            renderTable();
+          } catch (e) {
+            toast("err", "Грешка", e.message);
+          }
+          setBusy(false);
+        });
+
+        el("addConsultBtn").addEventListener("click", async () => {
+          const patientId = el("patientSelected").value;
+          const date = el("consultDate").value;
+
+          if (!patientId) return toast("warn", "Няма пациент", "Избери пациент.");
+          if (!date) return toast("warn", "Липсва дата", "Избери дата.");
+
+          setBusy(true);
+          try {
+            const r = await api("addConsultation", { patientId, date });
+
+            if (r && typeof r.remaining !== "undefined") {
+              const kind = Number(r.remaining) === 0 ? "warn" : "ok";
+              toast(kind, "Консултация добавена", `Остават: ${r.remaining}`);
+            } else {
+              toast("ok", "Консултация добавена", formatDate(date));
+            }
+
+            if (r && r.packageId) {
+              const prev = consultCountByPkg.get(r.packageId) || 0;
+              consultCountByPkg.set(r.packageId, prev + 1);
+              renderTable();
+            }
+          } catch (e) {
+            toast("err", "Грешка", e.message);
+          }
+          setBusy(false);
+        });
+
+        el("packagesTable").addEventListener("click", async (e) => {
+          const btn = e.target.closest("button");
+          if (!btn) return;
+
+          const action = btn.dataset.action;
+          const id = btn.dataset.id;
+
+          if (action === "deletePkg") return deletePackage(id);
+          if (action === "details") return openDetails(id);
+          if (action === "quickNew") return quickNewPackageFromOld(id);
+        });
+
+        el("modalCloseBtn").addEventListener("click", closeModal);
+        el("modalCloseBtn2").addEventListener("click", closeModal);
+
+        el("modalBackdrop").addEventListener("click", (e) => {
+          if (e.target === el("modalBackdrop")) closeModal();
+        });
+
+        document.addEventListener("keydown", (e) => {
+          if (e.key === "Escape" && modalPkgId) closeModal();
+        });
+
+        el("dDeleteBtn").addEventListener("click", () => {
+          if (!modalPkgId) return;
+          deletePackage(modalPkgId);
+        });
+
+        el("dQuickNewBtn").addEventListener("click", () => {
+          if (!modalPkgId) return;
+          quickNewPackageFromOld(modalPkgId);
+        });
+
+        refresh();
+      })();
+    </script>
+  </body>
+</html>
